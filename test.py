@@ -18,7 +18,6 @@ direction = (1, 0)  # Initial direction (right)
 apple_pos = None
 score = 0
 game_over = False
-game_paused = False
 last_move_time = 0
 
 # Camera settings
@@ -203,10 +202,10 @@ def draw_apple():
         x, y = apple_pos
         glPushMatrix()
         glTranslatef(x + 0.5, y + 0.5, 0.5)  # Center of grid cell, slightly above grid
-
+        
         # Apple body (red sphere)
         glColor3f(0.8, 0.1, 0.1)  # Deep red
-        glutSolidSphere(0.55, 16, 16)  # Increased size from 0.5 to 0.55
+        glutSolidSphere(0.5, 16, 16)  # Increased size from 0.4 to 0.5
         
         # Apple highlight
         glPushMatrix()
@@ -218,7 +217,7 @@ def draw_apple():
         # Apple stem
         glPushMatrix()
         glColor3f(0.4, 0.2, 0)  # Brown
-        glTranslatef(0, 0, 0.5)  # Raised position for larger apple
+        glTranslatef(0, 0, 0.45)  # Raised position for larger apple
         glRotatef(90, 1, 0, 0)
         gluCylinder(gluNewQuadric(), 0.05, 0.05, 0.25, 8, 1)  # Slightly longer stem
         glPopMatrix()
@@ -226,22 +225,16 @@ def draw_apple():
         # Leaf
         glPushMatrix()
         glColor3f(0.2, 0.7, 0.2)  # Green
-        glTranslatef(0.05, 0.05, 0.65)  # Raised position for larger apple
+        glTranslatef(0.05, 0.05, 0.6)  # Raised position for larger apple
         glRotatef(45, 0, 0, 1)
         glScalef(0.25, 0.35, 0.05)  # Slightly larger leaf
         glutSolidCube(1.0)
         glPopMatrix()
-
+        
         glPopMatrix()
 
 def draw_game_over():
-    """Draw game over screen overlay."""
-    # Save current OpenGL state
-    depth_enabled = glIsEnabled(GL_DEPTH_TEST)
-    
-    # Temporarily disable depth testing for the overlay
-    glDisable(GL_DEPTH_TEST)
-    
+    """Draw game over screen."""
     # Semi-transparent overlay
     glMatrixMode(GL_PROJECTION)
     glPushMatrix()
@@ -252,84 +245,27 @@ def draw_game_over():
     glPushMatrix()
     glLoadIdentity()
     
-    # Semi-transparent dark red overlay
+    # Semi-transparent black overlay
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    glColor4f(0.5, 0.0, 0.0, 0.7)  # Dark red with transparency
+    glColor4f(0, 0, 0, 0.7)
     glBegin(GL_QUADS)
     glVertex2f(0, 0)
     glVertex2f(WINDOW_WIDTH, 0)
     glVertex2f(WINDOW_WIDTH, WINDOW_HEIGHT)
     glVertex2f(0, WINDOW_HEIGHT)
     glEnd()
-    
-    # Game Over text - large and centered
-    draw_text(WINDOW_WIDTH//2 - 100, WINDOW_HEIGHT//2 + 30, "GAME OVER", GLUT_BITMAP_TIMES_ROMAN_24)
-    draw_text(WINDOW_WIDTH//2 - 120, WINDOW_HEIGHT//2 - 20, "Press R to restart", GLUT_BITMAP_HELVETICA_18)
-    draw_text(WINDOW_WIDTH//2 - 80, WINDOW_HEIGHT//2 - 60, f"Final Score: {score}", GLUT_BITMAP_HELVETICA_18)
-    
-    # Restore matrices
-    glPopMatrix()
-    glMatrixMode(GL_PROJECTION)
-    glPopMatrix()
-    glMatrixMode(GL_MODELVIEW)
-    
-    # Restore previous OpenGL state
-    if depth_enabled:
-        glEnable(GL_DEPTH_TEST)
-    else:
-        glDisable(GL_DEPTH_TEST)
-    
-    # Ensure blend mode is back to default state
     glDisable(GL_BLEND)
-
-def draw_pause_screen():
-    """Draw pause screen overlay."""
-    # Save current OpenGL state
-    depth_enabled = glIsEnabled(GL_DEPTH_TEST)
     
-    # Temporarily disable depth testing for the overlay
-    glDisable(GL_DEPTH_TEST)
+    # Game over text
+    draw_text(WINDOW_WIDTH//2 - 120, WINDOW_HEIGHT//2 + 30, "GAME OVER", GLUT_BITMAP_TIMES_ROMAN_24)
+    draw_text(WINDOW_WIDTH//2 - 80, WINDOW_HEIGHT//2 - 10, f"Final Score: {score}", GLUT_BITMAP_HELVETICA_18)
+    draw_text(WINDOW_WIDTH//2 - 100, WINDOW_HEIGHT//2 - 50, "Press 'R' to restart", GLUT_BITMAP_HELVETICA_18)
     
-    # Semi-transparent overlay
-    glMatrixMode(GL_PROJECTION)
-    glPushMatrix()
-    glLoadIdentity()
-    gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT)
-    
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
-    glLoadIdentity()
-    
-    # Semi-transparent dark blue overlay
-    glEnable(GL_BLEND)
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-    glColor4f(0, 0.1, 0.2, 0.5)  # Dark blue with transparency
-    glBegin(GL_QUADS)
-    glVertex2f(0, 0)
-    glVertex2f(WINDOW_WIDTH, 0)
-    glVertex2f(WINDOW_WIDTH, WINDOW_HEIGHT)
-    glVertex2f(0, WINDOW_HEIGHT)
-    glEnd()
-    
-    # Pause text
-    draw_text(WINDOW_WIDTH//2 - 60, WINDOW_HEIGHT//2 + 30, "PAUSED", GLUT_BITMAP_TIMES_ROMAN_24)
-    draw_text(WINDOW_WIDTH//2 - 150, WINDOW_HEIGHT//2 - 20, "Press Space or Left Click to resume", GLUT_BITMAP_HELVETICA_18)
-    
-    # Restore matrices
     glPopMatrix()
     glMatrixMode(GL_PROJECTION)
     glPopMatrix()
     glMatrixMode(GL_MODELVIEW)
-    
-    # Restore previous OpenGL state
-    if depth_enabled:
-        glEnable(GL_DEPTH_TEST)
-    else:
-        glDisable(GL_DEPTH_TEST)
-    
-    # Ensure blend mode is back to default state
-    glDisable(GL_BLEND)
 
 def setupCamera():
     """Configure the camera's projection and view settings."""
@@ -357,7 +293,7 @@ def update_game():
     global snake, direction, apple_pos, score, game_over, last_move_time
     
     current_time = time.time()
-    if current_time - last_move_time < GAME_SPEED / 1000.0 or game_over or game_paused:
+    if current_time - last_move_time < GAME_SPEED / 1000.0 or game_over:
         return
     
     last_move_time = current_time
@@ -396,7 +332,7 @@ def update_game():
 
 def keyboardListener(key, x, y):
     """Handle keyboard inputs for game control."""
-    global direction, game_over, camera_pos, zoom_level, game_paused
+    global direction, game_over, camera_pos, zoom_level
     
     # Zoom controls with +/- keys (= is the unshifted + on most keyboards)
     if key == b'=' or key == b'+':  # Zoom in
@@ -404,16 +340,11 @@ def keyboardListener(key, x, y):
     elif key == b'-' or key == b'_':  # Zoom out
         zoom_level = max(zoom_level - 0.1, 0.5)  # Limit min zoom
     
-    # Spacebar toggles pause state
-    if key == b' ':
-        game_paused = not game_paused
-        return
-    
     if key == b'r':  # Reset game when R is pressed
         reset_game()
         return
         
-    if game_over or game_paused:
+    if game_over:
         return
         
     # WASD for camera control
@@ -426,6 +357,20 @@ def keyboardListener(key, x, y):
         camera_pos = (camera_pos[0] - speed, camera_pos[1], camera_pos[2])
     elif key == b'd':
         camera_pos = (camera_pos[0] + speed, camera_pos[1], camera_pos[2])
+    elif key == b'q':  # Add up/down controls
+        camera_pos = (camera_pos[0], camera_pos[1], camera_pos[2] - speed)
+    elif key == b'e':
+        camera_pos = (camera_pos[0], camera_pos[1], camera_pos[2] + speed)
+        
+    # IJKL as alternative directional controls
+    elif key == b'i' and direction != (0, -1):  # Up
+        direction = (0, 1)
+    elif key == b'k' and direction != (0, 1):   # Down
+        direction = (0, -1)
+    elif key == b'j' and direction != (1, 0):   # Left
+        direction = (-1, 0)
+    elif key == b'l' and direction != (-1, 0):  # Right
+        direction = (1, 0)
 
 def specialKeyListener(key, x, y):
     """Handle special key inputs for snake direction."""
@@ -445,11 +390,7 @@ def specialKeyListener(key, x, y):
 
 def mouseListener(button, state, x, y):
     """Handle mouse inputs."""
-    global game_paused
-    
-    # Left mouse button toggles pause state
-    if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
-        game_paused = not game_paused
+    pass  # No mouse functionality needed for this game
 
 def idle():
     """Update game state and trigger screen redraw."""
@@ -457,36 +398,38 @@ def idle():
     glutPostRedisplay()
 
 def showScreen():
-    global game_over, score, game_paused
     """Display function to render the game scene."""
     # Clear color and depth buffers
+    if game_over:
+        glClearColor(0.2, 0.0, 0.0, 1.0)  # Dark red background for game over
+    else:
+        glClearColor(0.05, 0.05, 0.15, 1.0)  # Dark navy blue for normal gameplay
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glLoadIdentity()
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
 
     # Set up camera
     setupCamera()
-    
-    # Draw scene elements
+
+    # Always draw the grid, even when the game is over
     draw_grid()
-    draw_snake()
-    draw_apple()
-    
+
+    # Draw scene elements
+    if not game_over:
+        draw_snake()
+        draw_apple()
+
     # Draw score and instructions
     draw_text(10, WINDOW_HEIGHT - 30, f"Score: {score}")
-    draw_text(10, WINDOW_HEIGHT - 60, "Use arrow keys to control snake")
-    draw_text(10, WINDOW_HEIGHT - 90, "WASD to move camera")
+    draw_text(10, WINDOW_HEIGHT - 60, "Use arrow keys or IJKL to control snake")
+    draw_text(10, WINDOW_HEIGHT - 90, "WASD to move camera, Q/E for up/down")
     draw_text(10, WINDOW_HEIGHT - 120, "+/- to zoom in/out")
-    draw_text(10, WINDOW_HEIGHT - 150, "Space/Left Click to pause")
-    
+
     # Show game over screen if game is over
     if game_over:
         draw_game_over()
-    
-    # Show pause screen if game is paused
-    if game_paused:
-        draw_pause_screen()
-    
+
     # Swap buffers for smooth rendering
     glutSwapBuffers()
 
