@@ -1,6 +1,6 @@
 ---
-
 # 🐍 3D Snake Game
+---
 
 ## 📄 Project Information
 
