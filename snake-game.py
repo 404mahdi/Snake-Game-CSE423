@@ -63,6 +63,17 @@ super_apple_despawn_time = 10.0  # Seconds to remain if not collected
 super_apple_timer = 0.0
 
 
+# Dustbin power-down state
+dustbin_pos = None           # (x, y)
+dustbin_active = False       # Is the dustbin present on the grid
+dustbin_spawn_score = 5      # Minimum score threshold to spawn dustbin
+dustbin_spawn_chance = 0.01  # Chance per game tick to spawn the dustbin when conditions are met
+dustbin_timer = 0.0          # How long the slow-down effect remains
+dustbin_duration = 10.0      # Duration of slow-down in seconds
+snake_slowed = False         # Is the snake currently slowed down
+last_dustbin_move_time = 0
+
+
 # Camera settings
 camera_pos = (20, -50, 60)
 camera_target = (GRID_WIDTH // 2, GRID_HEIGHT // 2, 0)
@@ -243,6 +254,48 @@ def draw_moving_barriers():
                 glTranslatef((int(round(x)) + 0.5), (int(round(y)) + 0.5), 0.5)
                 glutSolidCube(0.85)
                 glPopMatrix()
+                
+
+def draw_dustbin():
+    if not dustbin_active or dustbin_pos is None:
+        return
+    x, y = dustbin_pos
+    glPushMatrix()
+    glTranslatef(x + 0.5, y + 0.5, 0.72)  # a bit higher for a bigger bin!
+
+    # (1) Main cylindrical bin: bigger and taller!
+    glColor3f(0.88, 0.88, 0.9)  # very light grey
+    glPushMatrix()
+    glRotatef(-90, 1, 0, 0)
+    glutSolidCylinder(0.5, 0.95, 32, 2)  # bigger radius and height
+    glPopMatrix()
+
+    # (2) Bin Lid: bigger, thicker lid
+    glColor3f(0.82, 0.82, 0.85)
+    glPushMatrix()
+    glTranslatef(0, 0, 0.95)
+    glRotatef(-90, 1, 0, 0)
+    glutSolidCylinder(0.55, 0.09, 32, 1)  # wider and more visible
+    glPopMatrix()
+
+    # (3) Lid knob/handle on top
+    glColor3f(0.55, 0.55, 0.60)  # darker gray
+    glPushMatrix()
+    glTranslatef(0, 0, 1.05)
+    glutSolidSphere(0.07, 16, 8)
+    glPopMatrix()
+
+    # (4) Handles: small cubes on the sides, near the lid
+    glColor3f(0.76, 0.76, 0.80)
+    for dx in [-0.41, 0.41]:
+        glPushMatrix()
+        glTranslatef(dx, 0, 0.95)
+        glScalef(0.23, 0.07, 0.13)
+        glutSolidCube(1.0)
+        glPopMatrix()
+
+    glPopMatrix()
+    
 
 def update_barriers():
     global barriers
@@ -308,6 +361,7 @@ def draw_egg():
     glutSolidSphere(0.7, 16, 16)
     glPopMatrix()
     glPopMatrix()
+    
     
 def spawn_egg():
     global egg_pos, egg_dir, egg_disp, egg_active, last_egg_move_time
@@ -398,6 +452,41 @@ def spawn_carrot():
         last_carrot_move_time = time.time()
     else:
         carrot_active = False
+        
+def spawn_super_apple():
+    global super_apple_pos, super_apple_active, super_apple_timer
+    now = time.time()
+    valid_positions = [
+        (x, y) for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
+        if (x, y) not in snake
+        and (apple_pos is None or (x, y) != apple_pos)
+        and (egg_pos is None or (x, y) != egg_pos)
+        and (carrot_pos is None or (x, y) != carrot_pos)
+        and not barrier_at_pos(x, y)
+    ]
+    if valid_positions:
+        super_apple_pos = random.choice(valid_positions)
+        super_apple_active = True
+        super_apple_timer = now
+        
+        
+def spawn_dustbin():
+    global dustbin_pos, dustbin_active, last_dustbin_move_time
+    valid_positions = [
+        (x, y) for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
+        if (x, y) not in snake
+        and (apple_pos is None or (x, y) != apple_pos)
+        and (egg_pos is None or (x, y) != egg_pos)
+        and (carrot_pos is None or (x, y) != carrot_pos)
+        and (super_apple_pos is None or (x, y) != super_apple_pos)
+        and not barrier_at_pos(x, y)
+    ]
+    if valid_positions:
+        dustbin_pos = random.choice(valid_positions)
+        dustbin_active = True
+        last_dustbin_move_time = time.time()
+    else:
+        dustbin_active = False
     
     
 def update_game():
@@ -407,6 +496,7 @@ def update_game():
     global last_egg_move_time, egg_speed, egg_duration
     global carrot_pos, carrot_active, carrot_disp, last_carrot_move_time
     global super_apple_pos, super_apple_active, super_apple_timer
+    global dustbin_pos, dustbin_active, dustbin_timer, dustbin_duration, snake_slowed
 
     now = time.time()
 
@@ -436,8 +526,8 @@ def update_game():
             super_apple_active = False
             super_apple_pos = None
 
-    # --- Movement Timer ---
-    effective_speed = game_speed // 2 if snake_boosted else game_speed
+    # --- Movement Timer (includes egg and dustbin effect) ---
+    effective_speed = game_speed // 2 if snake_boosted else (game_speed * 2 if snake_slowed else game_speed)
     if (
         now - last_move_time < effective_speed / 1000.0
         or game_over
@@ -477,19 +567,18 @@ def update_game():
         cx, cy = carrot_pos
         if new_head_x == cx and new_head_y == cy:
             carrot_active = False
-            last_carrot_collected_time = time.time()
+            # Optionally: last_carrot_collected_time = time.time()
             snake[:] = snake[:max(3, len(snake) // 2)]
 
     # --- Super Apple collection (adds 3 points and grows 3 segments) ---
     if super_apple_active and super_apple_pos and new_head == super_apple_pos:
         score += 3
         apple_counter += 1
-        # Grow snake by 3: append 3 segments at the tail
+        # Grow by 3: append 3 segments at the tail
         if len(snake) > 0:
             tail = snake[-1]
             snake.extend([tail] * 3)
         else:
-            # Fallback
             snake.extend([new_head] * 3)
         super_apple_active = False
         super_apple_pos = None
@@ -513,12 +602,27 @@ def update_game():
             snake_boosted = True
             egg_timer = egg_duration
 
+    # --- Dustbin collection (slows snake movement) ---
+    if dustbin_active and dustbin_pos is not None:
+        dbx, dby = dustbin_pos
+        if new_head_x == dbx and new_head_y == dby:
+            dustbin_active = False
+            snake_slowed = True
+            dustbin_timer = dustbin_duration
+
     # --- Egg boost timer countdown ---
     if snake_boosted:
         egg_timer -= effective_speed / 1000.0
         if egg_timer <= 0:
             snake_boosted = False
             egg_timer = 0.0
+
+    # --- Dustbin slow-down timer countdown ---
+    if snake_slowed:
+        dustbin_timer -= effective_speed / 1000.0
+        if dustbin_timer <= 0:
+            snake_slowed = False
+            dustbin_timer = 0.0
 
     # --- Apple collection ---
     if new_head == apple_pos:
@@ -542,22 +646,11 @@ def update_game():
         while len(snake) < 3:
             snake.append(tail)
 
-    # --- Super Apple spawn logic ---
+    # --- Super Apple spawn logic (now as function call) ---
     if (not super_apple_active 
         and score >= super_apple_spawn_score 
         and random.random() < super_apple_spawn_chance):
-        valid_positions = [
-            (x, y) for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
-            if (x, y) not in snake
-            and (apple_pos is None or (x, y) != apple_pos)
-            and (egg_pos is None or (x, y) != egg_pos)
-            and (carrot_pos is None or (x, y) != carrot_pos)
-            and not barrier_at_pos(x, y)
-        ]
-        if valid_positions:
-            super_apple_pos = random.choice(valid_positions)
-            super_apple_active = True
-            super_apple_timer = now
+        spawn_super_apple()
 
     # --- Egg spawn logic ---
     if (not egg_active and score > 3 and random.random() < 0.03):
@@ -566,6 +659,11 @@ def update_game():
     # --- Carrot spawn logic ---
     if (not carrot_active and score > carrot_spawn_score and random.random() < 0.01):
         spawn_carrot()
+
+    # --- Dustbin spawn logic ---
+    if (not dustbin_active and not snake_slowed 
+        and score >= dustbin_spawn_score and random.random() < dustbin_spawn_chance):
+        spawn_dustbin()
 
 def keyboardListener(key, x, y):
     global direction, game_over, camera_pos, zoom_level, game_paused
@@ -579,6 +677,7 @@ def keyboardListener(key, x, y):
         game_paused = not game_paused
     elif game_over or game_paused:
         return
+    
     speed = 2
     if key == b'w':
         camera_pos = (camera_pos[0], camera_pos[1] + speed, camera_pos[2])
@@ -625,6 +724,7 @@ def showScreen():
     draw_super_apple()
     draw_egg()
     draw_carrot()
+    draw_dustbin()
     if barriers_active:
         draw_moving_barriers()
     draw_text(10, WINDOW_HEIGHT - 30, f"Score: {score}")
