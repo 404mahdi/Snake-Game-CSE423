@@ -54,6 +54,14 @@ carrot_disp = 0.0         # For optional animation (like bounce)
 carrot_spawn_score = 6    # Minimum score to start spawning carrots
 last_carrot_move_time = 0
 
+# Super Apple (Big Violet/Pink Apple) state
+super_apple_pos = None  # (x, y)
+super_apple_active = False
+super_apple_spawn_score = 7  # Minimum score to start spawning, tweak as desired
+super_apple_spawn_chance = 0.01  # Chance to spawn per tick
+super_apple_despawn_time = 10.0  # Seconds to remain if not collected
+super_apple_timer = 0.0
+
 
 # Camera settings
 camera_pos = (20, -50, 60)
@@ -173,6 +181,57 @@ def draw_apple():
         glutSolidCube(1.0)
         glPopMatrix()
         glPopMatrix()
+        
+        
+def draw_super_apple():
+    if not super_apple_active or super_apple_pos is None:
+        return
+    x, y = super_apple_pos
+    glPushMatrix()
+    glTranslatef(x + 0.5, y + 0.5, 0.5)
+    glScalef(1.45, 1.45, 1.16)  # Large and slightly taller
+
+    # -- Apple Body (Red, with a slight "gradient") --
+    glColor3f(0.86, 0.13, 0.11)  # Vibrant red
+    glutSolidSphere(0.6, 40, 32)
+
+    # -- Glossy highlight (upper left) --
+    glPushMatrix()
+    glColor4f(1.0, 1.0, 1.0, 0.15)
+    glTranslatef(-0.22, 0.22, 0.27)
+    glRotatef(11, 1, 0, 0)
+    glScalef(0.12, 0.24, 0.10)
+    glutSolidSphere(1.0, 16, 10)
+    glPopMatrix()
+
+    # -- Darker base shadow (lower right) --
+    glPushMatrix()
+    glColor4f(0.60, 0.10, 0.10, 0.23)
+    glTranslatef(0.19, -0.18, -0.36)
+    glScalef(0.24, 0.17, 0.11)
+    glutSolidSphere(1.0, 12, 8)
+    glPopMatrix()
+
+    # -- Leaf (on top, angled, green) --
+    glPushMatrix()
+    glColor3f(0.23, 0.72, 0.28)
+    glTranslatef(0.22, 0.13, 0.52)
+    glRotatef(-33, 0, 0, 1)
+    glRotatef(-10, 1, 0, 0)
+    glScalef(0.14, 0.30, 0.05)
+    glutSolidCube(1.0)
+    glPopMatrix()
+
+    # -- Stem (chunky brown stem) --
+    glPushMatrix()
+    glColor3f(0.38, 0.22, 0.09)
+    glTranslatef(0.04, 0.00, 0.72)
+    glRotatef(80, 1, 0, 0)
+    gluCylinder(gluNewQuadric(), 0.05, 0.04, 0.20, 10, 2)
+    glPopMatrix()
+
+    glPopMatrix()
+
 
 def draw_moving_barriers():
     glColor3f(0.69, 0.54, 0.32)
@@ -347,13 +406,16 @@ def update_game():
     global egg_pos, egg_dir, egg_disp, egg_active, egg_timer, snake_boosted
     global last_egg_move_time, egg_speed, egg_duration
     global carrot_pos, carrot_active, carrot_disp, last_carrot_move_time
+    global super_apple_pos, super_apple_active, super_apple_timer
 
+    now = time.time()
+
+    # --- Update barriers ---
     if barriers_active:
         update_barriers()
 
-    # ---- Egg animation update ----
+    # --- Egg animation update ---
     if egg_active and egg_pos is not None:
-        now = time.time()
         if now - last_egg_move_time > 0.016:
             egg_disp += egg_dir * egg_speed
             if egg_disp > 0.5:
@@ -364,45 +426,44 @@ def update_game():
                 egg_dir = 1
             last_egg_move_time = now
 
-    # (Optional) ---- Carrot animation update ----
-    # For bounce animation if you want it!
+    # --- Carrot animation update (bobbing) ---
     if carrot_active and carrot_pos is not None:
-        now = time.time()
-        # Simulate a little bobbing using sine wave (optional)
         carrot_disp = 0.15 * math.sin(now * 2)
 
-    # --- Powerup: Boosted speed calculation ---
-    current_time = time.time()
-    effective_speed = game_speed // 2 if snake_boosted else game_speed
+    # --- Super Apple timeout logic ---
+    if super_apple_active:
+        if now - super_apple_timer > super_apple_despawn_time:
+            super_apple_active = False
+            super_apple_pos = None
 
+    # --- Movement Timer ---
+    effective_speed = game_speed // 2 if snake_boosted else game_speed
     if (
-        current_time - last_move_time < effective_speed / 1000.0
+        now - last_move_time < effective_speed / 1000.0
         or game_over
         or game_paused
     ):
         return
+    last_move_time = now
 
-    last_move_time = current_time
-
+    # --- Move Snake Head ---
     head_x, head_y = snake[0]
     new_head_x = head_x + direction[0]
     new_head_y = head_y + direction[1]
     new_head = (new_head_x, new_head_y)
 
-    # Check collisions with self or bounds
+    # --- Collisions with self or perimeter ---
     if (
         new_head in snake[:-1]
-        or new_head_x < 0
-        or new_head_x >= GRID_WIDTH
-        or new_head_y < 0
-        or new_head_y >= GRID_HEIGHT
+        or new_head_x < 0 or new_head_x >= GRID_WIDTH
+        or new_head_y < 0 or new_head_y >= GRID_HEIGHT
     ):
         game_over = True
         return
 
     snake.insert(0, new_head)
 
-    # Barrier collision
+    # --- Barrier collision ---
     if barriers_active:
         for base_x, y, b_direction in barriers:
             for offset in range(barrier_length):
@@ -411,15 +472,33 @@ def update_game():
                     game_over = True
                     return
 
-    # --- Carrot collection logic ---
+    # --- Carrot collection ---
     if carrot_active and carrot_pos is not None:
         cx, cy = carrot_pos
         if new_head_x == cx and new_head_y == cy:
             carrot_active = False
-            # Shrink snake to approximately half its length
+            last_carrot_collected_time = time.time()
             snake[:] = snake[:max(3, len(snake) // 2)]
-            
-    
+
+    # --- Super Apple collection (adds 3 points and grows 3 segments) ---
+    if super_apple_active and super_apple_pos and new_head == super_apple_pos:
+        score += 3
+        apple_counter += 1
+        # Grow snake by 3: append 3 segments at the tail
+        if len(snake) > 0:
+            tail = snake[-1]
+            snake.extend([tail] * 3)
+        else:
+            # Fallback
+            snake.extend([new_head] * 3)
+        super_apple_active = False
+        super_apple_pos = None
+        if apple_counter % snake_speed_score == 0:
+            game_speed = max(game_speed - speed_increment, minimum_game_speed)
+            if score >= barrier_spawn_score:
+                if not barriers_active:
+                    barriers_active = True
+                add_new_barrier()
 
     # --- Egg pickup logic ---
     if egg_active and egg_pos is not None:
@@ -434,21 +513,20 @@ def update_game():
             snake_boosted = True
             egg_timer = egg_duration
 
-    # --- Handle speed-up timer countdown ---
+    # --- Egg boost timer countdown ---
     if snake_boosted:
         egg_timer -= effective_speed / 1000.0
         if egg_timer <= 0:
             snake_boosted = False
             egg_timer = 0.0
 
-    # Apple? - speed up and barrier add, as you already had
+    # --- Apple collection ---
     if new_head == apple_pos:
         score += 1
         apple_counter += 1
         apple_pos = None
         spawn_apple()
 
-        # Increase speed/barriers
         if apple_counter % snake_speed_score == 0:
             game_speed = max(game_speed - speed_increment, minimum_game_speed)
             if score >= barrier_spawn_score:
@@ -457,19 +535,36 @@ def update_game():
                 add_new_barrier()
     else:
         snake.pop()
-        
-    # ...after potential snake.pop()
+
+    # --- Keep snake minimum length ---
     if len(snake) < 3:
         tail = snake[-1]
         while len(snake) < 3:
             snake.append(tail)
+
+    # --- Super Apple spawn logic ---
+    if (not super_apple_active 
+        and score >= super_apple_spawn_score 
+        and random.random() < super_apple_spawn_chance):
+        valid_positions = [
+            (x, y) for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
+            if (x, y) not in snake
+            and (apple_pos is None or (x, y) != apple_pos)
+            and (egg_pos is None or (x, y) != egg_pos)
+            and (carrot_pos is None or (x, y) != carrot_pos)
+            and not barrier_at_pos(x, y)
+        ]
+        if valid_positions:
+            super_apple_pos = random.choice(valid_positions)
+            super_apple_active = True
+            super_apple_timer = now
 
     # --- Egg spawn logic ---
     if (not egg_active and score > 3 and random.random() < 0.03):
         spawn_egg()
 
     # --- Carrot spawn logic ---
-    if (not carrot_active and score > carrot_spawn_score and random.random() < 0.03):
+    if (not carrot_active and score > carrot_spawn_score and random.random() < 0.01):
         spawn_carrot()
 
 def keyboardListener(key, x, y):
@@ -527,6 +622,7 @@ def showScreen():
     draw_grid()
     draw_snake()
     draw_apple()
+    draw_super_apple()
     draw_egg()
     draw_carrot()
     if barriers_active:
