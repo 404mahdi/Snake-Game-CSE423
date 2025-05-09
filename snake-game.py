@@ -28,7 +28,7 @@ apple_counter = 0
 # Barriers
 barriers = []
 barrier_length = 4  # Length of the barrier
-barrier_speed = 0.03
+barrier_speed = 0.01
 max_barriers = 8  # Maximum number of barriers
 barriers_active = False
 barrier_spawn_score = 5  # Spawn at score>1, you can tweak or randomize it
@@ -83,6 +83,12 @@ zoom_level = 1.5
 def reset_game():
     global snake, direction, apple_pos, score, game_over, last_move_time
     global apple_counter, game_speed, barriers, barriers_active
+    # --- Power-ups and obstacles ---
+    global egg_pos, egg_active, egg_disp, egg_timer, snake_boosted
+    global carrot_pos, carrot_active, carrot_disp
+    global super_apple_pos, super_apple_active, super_apple_timer
+    global dustbin_pos, dustbin_active, dustbin_timer, snake_slowed
+
     center_x, center_y = GRID_WIDTH // 2, GRID_HEIGHT // 2
     snake = [(center_x, center_y), (center_x - 1, center_y), (center_x - 2, center_y)]
     direction = (1, 0)
@@ -94,6 +100,26 @@ def reset_game():
     game_speed = initial_game_speed
     barriers = []
     last_move_time = time.time()
+    # --- Reset all power-up/dustbin states ---
+    egg_pos = None
+    egg_active = False
+    egg_disp = 0.0
+    egg_timer = 0.0
+    snake_boosted = False
+
+    carrot_pos = None
+    carrot_active = False
+    carrot_disp = 0.0
+
+    super_apple_pos = None
+    super_apple_active = False
+    super_apple_timer = 0.0
+
+    dustbin_pos = None
+    dustbin_active = False
+    dustbin_timer = 0.0
+    snake_slowed = False
+
     spawn_apple()
 
 def spawn_apple():
@@ -677,16 +703,30 @@ def keyboardListener(key, x, y):
         game_paused = not game_paused
     elif game_over or game_paused:
         return
-    
+
     speed = 2
+    # --- Camera movement limits ---
+    min_camera_x = -20
+    max_camera_x = GRID_WIDTH + 20
+    min_camera_y = -60
+    max_camera_y = GRID_HEIGHT + 20
+
+    # Move camera up/down/left/right with constraints
+    x, y_, z = camera_pos  # y_ (so it doesn’t shadow y param)
+
     if key == b'w':
-        camera_pos = (camera_pos[0], camera_pos[1] + speed, camera_pos[2])
+        new_y = min(max_camera_y, y_ + speed)
+        camera_pos = (x, new_y, z)
     elif key == b's':
-        camera_pos = (camera_pos[0], camera_pos[1] - speed, camera_pos[2])
+        new_y = max(min_camera_y, y_ - speed)
+        camera_pos = (x, new_y, z)
     elif key == b'a':
-        camera_pos = (camera_pos[0] - speed, camera_pos[1], camera_pos[2])
+        new_x = max(min_camera_x, x - speed)
+        camera_pos = (new_x, y_, z)
     elif key == b'd':
-        camera_pos = (camera_pos[0] + speed, camera_pos[1], camera_pos[2])
+        new_x = min(max_camera_x, x + speed)
+        camera_pos = (new_x, y_, z)
+        
 
 def specialKeyListener(key, x, y):
     global direction

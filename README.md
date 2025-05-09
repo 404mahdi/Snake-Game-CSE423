@@ -1,75 +1,97 @@
 ---
-# 🎮 3D Snake Game
----
+
+# 🐍 3D Snake Game
 
 ## 📄 Project Information
 
-- **Course**: CSE423 — Computer Graphics
-- **Semester**: Spring 2025
-- **Institution**: Brac University
-- **Submission Date**: [Date]
+- **Course**: **CSE423 — Computer Graphics**
+- **Semester**: **Spring 2025**
+- **Institution**: **Brac University**
+- **Submission Date**: **09-05-2025**
 
 ---
 
-## 👨‍💻 Team Members
+## Project Overview
 
-- Mahdi Hasan
-- Sathi Marzan
--
+Our project is a modern 3D version of the classic Snake game, implemented using Python, OpenGL (PyOpenGL), and GLUT. The game features an interactive 3D environment, advanced camera controls, lively power-ups and obstacles, and polished graphics to create a visually stimulating and engaging experience.
 
 ---
 
-## 🕹️ Project Overview
+## Features
 
-This project presents a **3D remake** of the classic **Snake** game, developed using **Python** and **OpenGL (PyOpenGL)**.  
-While the snake moves on a **2D grid plane (X-Y)**, the entire environment is rendered in **3D** with **adjustable camera perspectives**.
+### 👾 Core Gameplay
+
+- **3D Snake Movement:** The snake moves in a 40x40 grid rendered in 3D.
+- **Arrow Key Control:** Direct the snake with keyboard arrow keys.
+- **Growth & Collision:** Snake grows longer by eating apples. Collision with self, the boundary, or barriers ends the game.
+- **Game Over State:** Dedicated overlay with score and restart instructions.
+- **Pause Functionality:** Space bar or left mouse click toggles pause; displays a pause overlay.
+- **Restart Functionality:** On pressing "R" at game over, the entire game resets with a clean grid.
+
+### 🍏 Food and Scoring
+
+- **Red Apple:** Regular food; increases score and snake length by 1. Respawns after being eaten.
+- **Score Display:** Score is always shown; the game increases in speed every 5 apples eaten (configurable).
+
+### 🔮 Power-Ups and Obstacles
+
+- **Moving Barriers:**  
+  Spawn after a threshold score, move horizontally, and cause game over on collision. Limited in quantity, with increasing speed as score rises.
+- **Super Apple:**  
+  Provides +3 score and length, appears temporarily after reaching a certain score.
+- **Egg Power-Up (Speed Boost):**  
+  Animated, provides temporary 2x speed for the snake.
+- **Carrot Power-Up (Shrink):**  
+  Animated bounce, halves snake length (minimum remains 3).
+- **Dustbin Power-Down (Slow):**  
+  Temporarily slows the snake.
+
+### 🎨 Visuals & User Interface
+
+- **OpenGL 3D Rendering:**  
+  Distinct models and color for each entity.
+- **Score and Controls HUD:**  
+  Persistent display of score and basic controls.
+- **Decorative Aura Border:**  
+  Blue border around the game grid.
+- **Pause and Game Over Screens:**  
+  Overlays with clear instructions.
+
+### 🖱️ Camera Controls
+
+- **Move Camera:**  
+  W/A/S/D, with movement bounds.
+- **Zoom:**  
+  `+`/`-`, min and max zoom enforced.
 
 ---
 
-## ✨ Key Features
+## 📦 Installation & Running
 
-- 3D environment with dynamic camera controls.
-- Snake moves on a 2D grid (up, down, left, right).
-- Collect apples to grow and increase score.
-- Self-collision results in game over.
-- Randomly spawning **power-ups**:
-  - _Speed Boost_, _Shrink_, _Double Points_.
-- Randomly spawning **negative effects**:
-  - _Slow Down_, _Reverse Controls_.
-- **Moving Barriers** as dynamic map hazards.
-- **Level progression** with increasing difficulty:
-  - Level 1: Basic speed, 5 apples to complete.
-  - Level 2: Increased speed, static obstacles.
-  - Level 3: Fast-moving food and dynamic hazards.
+### **Quick Start: Using OpenGL.zip**
 
----
-
-## ⚙️ Technologies Used
-
-- **Python 3.x**
-- **PyOpenGL**
-- **GLUT**
-
----
-
-## 🚀 How to Run
-
-1. Install the required libraries:
-
-   ```bash
-   pip install PyOpenGL PyOpenGL_accelerate
+1. **Extract the opengl.zip** file included in this repository.
+2. **Navigate to the extracted folder** using a terminal/command prompt.
+3. **Run the game:**
+   ```sh
+   python snake-game.py
    ```
 
-2. Execute the game:
-   ```bash
-   python snake_game.py
-   ```
+---
+
+## 🧩 How to Play
+
+- **Arrow Keys:** Move the snake
+- **W/A/S/D:** Pan the 3D camera (movement is bounded)
+- **+/-:** Zoom camera in and out
+- **Space or Left Click:** Pause/Unpause game
+- **R:** Restart the game after game over
+- **Objective:** Eat apples, score high, collect power-ups, avoid obstacles and survive as long as possible!
 
 ---
 
-## 🏫 Academic Declaration
+## 📷 Screenshots
 
-This project was developed collaboratively as part of the coursework for **CSE423 — Computer Graphics** under **Brac University**, during the **Spring 2025** semester.  
-All work presented is original and created solely for academic evaluation.
+_(Paste screenshots here to showcase gameplay!)_
 
 ---
