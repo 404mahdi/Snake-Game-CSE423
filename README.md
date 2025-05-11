@@ -92,6 +92,13 @@ Our project is a modern 3D version of the classic Snake game, implemented using 
 
 ## 📷 Screenshots
 
-_(Paste screenshots here to showcase gameplay!)_
+![image](https://s4.gifyu.com/images/bsbMs.gif)
+
+![image](https://s4.gifyu.com/images/bsbzo.gif)
+
+![image](https://s4.gifyu.com/images/bsbLM.gif)
+
+![image](https://github.com/user-attachments/assets/54084973-0108-4aae-ae69-208001eafd82)
+
 
 ---
